@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0F172A" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+    <linearGradient id="trainGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#E2E8F0" />
+    </linearGradient>
+    <linearGradient id="trackGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#2563EB" />
+      <stop offset="35%" stop-color="#059669" />
+      <stop offset="70%" stop-color="#EAB308" />
+      <stop offset="100%" stop-color="#DC2626" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background with smooth rounded squircle -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
+  <rect width="504" height="504" x="4" y="4" rx="108" fill="none" stroke="#334155" stroke-width="4" opacity="0.6" />
+
+  <!-- Cauvery river gentle waves background -->
+  <path d="M 40 400 Q 140 370 256 400 T 472 400" fill="none" stroke="#0891B2" stroke-width="12" stroke-linecap="round" opacity="0.4" />
+  <path d="M 60 426 Q 160 396 256 426 T 452 426" fill="none" stroke="#2563EB" stroke-width="8" stroke-linecap="round" opacity="0.3" />
+
+  <!-- Metro Multi-Line Golden Viaduct Track Arc -->
+  <path d="M 64 360 C 140 330 372 330 448 360" fill="none" stroke="url(#trackGrad)" stroke-width="16" stroke-linecap="round" filter="url(#glow)" />
+
+  <!-- Metro Train Front Body (Aerodynamic Bullet Design) -->
+  <g transform="translate(136, 110)">
+    <!-- Main Body Shell -->
+    <path d="M 30 70 C 30 20 210 20 210 70 L 222 210 C 222 240 18 240 18 210 Z" fill="url(#trainGrad)" />
+    
+    <!-- Windshield glass -->
+    <path d="M 46 64 C 46 42 194 42 194 64 L 188 126 C 188 136 52 136 52 126 Z" fill="#0B132B" stroke="#38BDF8" stroke-width="3" />
+    <!-- Windshield reflection highlight -->
+    <path d="M 60 70 L 110 70 L 95 120 L 68 120 Z" fill="#38BDF8" opacity="0.35" />
+
+    <!-- Delta Network Emblem on train nose -->
+    <circle cx="120" cy="154" r="14" fill="#2563EB" />
+    <path d="M 113 154 L 127 154 M 120 147 L 120 161" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" />
+
+    <!-- Aerodynamic Side Liners (Blue & Red stripes) -->
+    <path d="M 22 178 L 218 178" stroke="#DC2626" stroke-width="7" stroke-linecap="round" />
+    <path d="M 20 190 L 220 190" stroke="#2563EB" stroke-width="5" stroke-linecap="round" />
+
+    <!-- Projector Headlamps (Twin Glowing Yellow/White Beams) -->
+    <ellipse cx="48" cy="192" rx="12" ry="7" fill="#FEF08A" filter="url(#glow)" />
+    <ellipse cx="192" cy="192" rx="12" ry="7" fill="#FEF08A" filter="url(#glow)" />
+    <circle cx="48" cy="192" r="5" fill="#FFFFFF" />
+    <circle cx="192" cy="192" r="5" fill="#FFFFFF" />
+
+    <!-- Cowcatcher / Track plow lower base -->
+    <path d="M 36 226 L 204 226 L 194 246 L 46 246 Z" fill="#334155" />
+    <line x1="120" y1="226" x2="120" y2="246" stroke="#64748B" stroke-width="3" />
+  </g>
+
+  <!-- High-Tech Delta Transit Badge -->
+  <text x="256" y="475" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="28" fill="#94A3B8" letter-spacing="6">DELTA METRO</text>
+</svg>

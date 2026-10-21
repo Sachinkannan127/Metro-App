@@ -1,0 +1,64 @@
+{
+  "name": "Cauvery Delta Metro · Thanjavur Regional Rapid Transit",
+  "short_name": "Cauvery Metro",
+  "description": "Interactive real-time 3D digital twin, live schedule, and trip planner for the Cauvery Delta Metro Network connecting Thanjavur, Kumbakonam, Mannargudi, Pattukkottai, and Nagapattinam.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#0B0F17",
+  "theme_color": "#0F172A",
+  "lang": "en",
+  "categories": ["travel", "navigation", "transportation", "utilities"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Live Map",
+      "short_name": "Map",
+      "description": "View live 3D Metro network",
+      "url": "./index.html#map",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Trip Planner",
+      "short_name": "Planner",
+      "description": "Find fastest metro routes across Delta stations",
+      "url": "./index.html#plan",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Thanjavur Hub",
+      "short_name": "Thanjavur",
+      "description": "Inspect Thanjavur Junction Metro Station",
+      "url": "./index.html#st-thanjavur",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Kumbakonam Hub",
+      "short_name": "Kumbakonam",
+      "description": "Inspect Kumbakonam Junction Metro Station",
+      "url": "./index.html#st-kumbakonam",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
