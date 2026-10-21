@@ -24,6 +24,7 @@ The experience is designed around the Thanjavur region and connects:
 - Installable PWA experience
 - Offline application-shell caching through a service worker
 - Tamil-friendly typography and localization-ready interface
+- CC0 metro stopping and departure ambience
 
 ## Getting started
 
@@ -53,6 +54,8 @@ This project is a static web app and does not require a build step.
 ├── index.html              # Main application UI and client-side logic
 ├── manifest.json            # PWA metadata, icons, and shortcuts
 ├── sw.js                    # Service worker and offline cache strategy
+├── audio/
+│   └── metro-train-cc0.wav  # CC0 metro/train recording
 ├── icons/
 │   ├── icon.svg
 │   ├── icon-192.png
@@ -77,3 +80,7 @@ For the best PWA behavior:
 ## License
 
 No license has been specified for this repository yet.
+
+### Audio source
+
+The recording in `audio/metro-train-cc0.wav` is sourced from [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Ferrocarril_desde_la_Universidad_de_las_Artes.wav) and is published under the CC0/public-domain dedication.

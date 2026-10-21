@@ -6295,7 +6295,7 @@
 
       let lightsOn = true;
       let soundOn = false;
-      let soundCtx = null, soundMaster = null, trainSound = null, trainMotor = null, trainRail = null, trainWheel = null, trainBrake = null, roadSound = null, crowdSound = null, trainMotorOscillators = [];
+      let soundCtx = null, soundMaster = null, trainSound = null, trainMotor = null, trainRail = null, trainWheel = null, trainBrake = null, trainRecording = null, trainRecordingGain = null, roadSound = null, crowdSound = null, trainMotorOscillators = [];
 
       function createNoiseSource(ctx) {
         const buffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
@@ -6318,6 +6318,25 @@
         soundMaster = soundCtx.createGain();
         soundMaster.gain.value = 0.0001;
         soundMaster.connect(soundCtx.destination);
+        trainRecordingGain = soundCtx.createGain();
+        trainRecordingGain.gain.value = 0;
+        trainRecordingGain.connect(soundMaster);
+        fetch('./audio/metro-train-cc0.wav')
+          .then(response => {
+            if (!response.ok) throw new Error(`Metro recording request failed: ${response.status}`);
+            return response.arrayBuffer();
+          })
+          .then(data => soundCtx.decodeAudioData(data))
+          .then(buffer => {
+            if (!soundCtx || !trainRecordingGain) return;
+            const source = soundCtx.createBufferSource();
+            source.buffer = buffer;
+            source.loop = true;
+            source.connect(trainRecordingGain);
+            source.start();
+            trainRecording = source;
+          })
+          .catch(error => console.warn('Metro recording unavailable:', error));
 
         const trainOsc = soundCtx.createOscillator();
         const trainFilter = soundCtx.createBiquadFilter();
@@ -6420,6 +6439,7 @@
         const railLevel = soundOn ? Math.min(0.10, activeTrains * 0.0021 * (0.45 + speedRatio * 0.8)) : 0;
         const wheelLevel = soundOn ? Math.min(0.075, activeTrains * 0.0014 * (0.25 + speedRatio * 1.2)) : 0;
         const brakeLevel = soundOn ? Math.min(0.045, activeTrains * 0.0025 * brakingRatio) : 0;
+        const recordingLevel = soundOn ? Math.min(0.18, activeTrains * 0.0045) : 0;
         const roadLevel = soundOn && roadGroup.visible ? Math.min(0.055, activeVehicles * 0.00075) : 0;
         const crowdLevel = soundOn ? Math.min(0.045, waiting * 0.000003) : 0;
         const motorPitch = 58 + speedRatio * 105;
@@ -6429,6 +6449,7 @@
         trainRail.gain.setTargetAtTime(railLevel, now, 0.25);
         trainWheel.gain.setTargetAtTime(wheelLevel, now, 0.18);
         trainBrake.gain.setTargetAtTime(brakeLevel, now, 0.12);
+        if (trainRecordingGain) trainRecordingGain.gain.setTargetAtTime(recordingLevel, now, 0.3);
         trainMotorOscillators.forEach(item => {
           item.oscillator.frequency.setTargetAtTime(motorPitch * item.multiplier, now, 0.15);
         });
