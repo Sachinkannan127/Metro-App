@@ -2678,13 +2678,13 @@
       const isMobile = window.matchMedia('(max-width: 920px)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
       const canvas = $('#scene');
       const renderer = new THREE.WebGLRenderer({ canvas, antialias: !isMobile, powerPreference: 'high-performance' });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.25 : 2));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1 : 2));
       renderer.shadowMap.enabled = !isMobile;
       renderer.shadowMap.type = isMobile ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
 
       const scene = new THREE.Scene();
       scene.background = new THREE.Color('#E8ECE9');
-      scene.fog = new THREE.FogExp2('#E8ECE9', 0.0016);
+      scene.fog = new THREE.FogExp2('#E8ECE9', isMobile ? 0.0024 : 0.0016);
 
       const VIEW = 85;
       const camera = new THREE.OrthographicCamera(-VIEW, VIEW, VIEW, -VIEW, -3000, 5000);
@@ -2694,7 +2694,7 @@
       scene.add(hemiLight);
 
       const sun = new THREE.DirectionalLight('#FFF7E6', 0.8);
-      sun.castShadow = true;
+      sun.castShadow = !isMobile;
       sun.shadow.mapSize.set(isMobile ? 512 : 2048, isMobile ? 512 : 2048);
       sun.shadow.bias = -0.0005;
       sun.shadow.normalBias = 0.02;
@@ -3282,7 +3282,7 @@
       // ==========================================
       // 7B.2. HIGHWAY STREET POST LIGHTS
       // ==========================================
-      const MAX_STREET_LAMPS = isMobile ? 80 : 160;
+      const MAX_STREET_LAMPS = isMobile ? 40 : 160;
       const streetBulbMat = new THREE.MeshBasicMaterial({ color: '#FFFDEB' });
       const streetPoolMat = new THREE.MeshBasicMaterial({
         color: '#FEF08A',
@@ -3529,9 +3529,9 @@
       }
 
       // Under-Transport Vehicles Setup
-      const MAX_BUSES = isMobile ? 12 : 24;
-      const MAX_TRUCKS = isMobile ? 13 : 26;
-      const MAX_CARS = isMobile ? 18 : 36;
+      const MAX_BUSES = isMobile ? 6 : 24;
+      const MAX_TRUCKS = isMobile ? 8 : 26;
+      const MAX_CARS = isMobile ? 12 : 36;
       const TOTAL_VEHICLES = MAX_BUSES + MAX_TRUCKS + MAX_CARS;
 
       // Buses Instanced Meshes (TNSTC & SETC)
@@ -4799,7 +4799,7 @@
       // ==========================================
       // 12. INSTANCED PEOPLE / PASSENGERS
       // ==========================================
-      const MAXP = isMobile ? 1200 : 4800;
+      const MAXP = isMobile ? 600 : 4800;
       const pBody = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.07, 0.09, 0.24, 7).translate(0, 0.12, 0), mat('#FFFFFF'), MAXP);
       const pHead = new THREE.InstancedMesh(new THREE.SphereGeometry(0.06, 8, 6).translate(0, 0.29, 0), mat('#422B1E'), MAXP);
       // South Indian vibrant clothing color palette
@@ -6466,6 +6466,7 @@
       // 23. MAIN ANIMATION LOOP
       // ==========================================
       let last = performance.now(), acc1 = 0, acc2 = 0, labelAcc = 0;
+      let renderAcc = 0, peopleAcc = 0, trafficAcc = 0, trainAcc = 0, lightingAcc = 0, craneAcc = 0;
       const tgt = new THREE.Vector3();
 
       function frame(now) {
@@ -6484,20 +6485,41 @@
           sim.t += (nowIST() - sim.t) * 0.05;
         }
 
-        updateTrainVisuals();
-        updateSignals(sim.t);
-        if (!isMobile || (Math.floor(now / 50) % 2 === 0)) {
-          updateRoadTraffic(rdt * speed, (sim.t / 3600) % 24);
-          updatePeople(rdt * Math.min(3, Math.sqrt(speed)), now / 1000);
+        trainAcc += rdt;
+        if (!isMobile || trainAcc >= 1 / 30) {
+          trainAcc = 0;
+          updateTrainVisuals();
+          updateSignals(sim.t);
         }
-        updateDayNightLighting(nowIST());
+        peopleAcc += rdt;
+        if (!isMobile || peopleAcc >= 0.12) {
+          const peopleDt = peopleAcc;
+          peopleAcc = 0;
+          updatePeople(peopleDt * Math.min(3, Math.sqrt(speed)), now / 1000);
+        }
+        trafficAcc += rdt;
+        if (!isMobile || trafficAcc >= 0.08) {
+          const trafficDt = trafficAcc;
+          trafficAcc = 0;
+          updateRoadTraffic(trafficDt * speed, (sim.t / 3600) % 24);
+        }
+        lightingAcc += rdt;
+        if (!isMobile || lightingAcc >= 0.3) {
+          lightingAcc = 0;
+          updateDayNightLighting(nowIST());
+        }
 
         // Rotate construction cranes on Phase 2 corridors
-        cranes.forEach((k, i) => {
-          k.a += k.sp * rdt;
-          setInst(craneJib, i, k.x, 3.55, k.z, k.a);
-        });
-        craneJib.instanceMatrix.needsUpdate = true;
+        craneAcc += rdt;
+        if (!isMobile || craneAcc >= 0.1) {
+          const craneDt = craneAcc;
+          craneAcc = 0;
+          cranes.forEach((k, i) => {
+            k.a += k.sp * craneDt;
+            setInst(craneJib, i, k.x, 3.55, k.z, k.a);
+          });
+          craneJib.instanceMatrix.needsUpdate = true;
+        }
 
         if (rider && rider.state === 'wait') {
           riderMesh.position.set(...rider.spot);
@@ -6533,18 +6555,24 @@
         controls.target.z = clamp(controls.target.z, Z0, Z1);
         controls.update();
 
-        // Dynamic shadow frustum centered around view target
-        const ext = (VIEW / camera.zoom) * 0.95 + 12;
-        sun.position.copy(controls.target).add(SUN_OFF);
-        sun.target.position.copy(controls.target);
-        const sc = sun.shadow.camera;
-        if (Math.abs(sc.right - ext) > 0.5) {
-          sc.left = -ext; sc.right = ext; sc.top = ext; sc.bottom = -ext;
-          sc.near = 1; sc.far = 450;
-          sc.updateProjectionMatrix();
+        if (!isMobile) {
+          // Dynamic shadow frustum centered around view target
+          const ext = (VIEW / camera.zoom) * 0.95 + 12;
+          sun.position.copy(controls.target).add(SUN_OFF);
+          sun.target.position.copy(controls.target);
+          const sc = sun.shadow.camera;
+          if (Math.abs(sc.right - ext) > 0.5) {
+            sc.left = -ext; sc.right = ext; sc.top = ext; sc.bottom = -ext;
+            sc.near = 1; sc.far = 450;
+            sc.updateProjectionMatrix();
+          }
         }
 
-        renderer.render(scene, camera);
+        renderAcc += rdt;
+        if (!isMobile || renderAcc >= 1 / 30) {
+          renderAcc = 0;
+          renderer.render(scene, camera);
+        }
         labelAcc += rdt;
         if (!isMobile || labelAcc >= 0.08) {
           labelAcc = 0;
