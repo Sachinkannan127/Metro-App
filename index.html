@@ -2122,7 +2122,7 @@
       <div class="ticker" id="ticker"><span class="tm" id="tkTime">--:--</span><span class="msg" id="tkMsg">Initializing
           Cauvery Delta metro network…</span></div>
       <div class="seg" role="group" aria-label="Simulation speed">
-        <button data-speed="10" aria-pressed="true">10×</button>
+        <button data-speed="25" aria-pressed="true">25×</button>
         <button data-speed="30" aria-pressed="false">30×</button>
         <button data-speed="60" aria-pressed="false">60×</button>
       </div>
@@ -2255,7 +2255,7 @@
       <div class="quick-row">
         <span class="quick-label">Simulation Speed</span>
         <div class="seg" role="group" aria-label="Mobile Speed">
-          <button class="m-spd-btn" data-speed="10" aria-pressed="true">10×</button>
+          <button class="m-spd-btn" data-speed="25" aria-pressed="true">25×</button>
           <button class="m-spd-btn" data-speed="30" aria-pressed="false">30×</button>
           <button class="m-spd-btn" data-speed="60" aria-pressed="false">60×</button>
         </div>
@@ -6060,7 +6060,7 @@
       chipToggle('#chipRoad', roadGroup);
 
       // Speed multiplier controls
-      let speed = 10, mode = 'live';
+      let speed = 25, mode = 'live';
       document.querySelectorAll('.seg button').forEach(b => {
         b.onclick = () => {
           speed = +b.dataset.speed;
@@ -6335,8 +6335,8 @@
       bindThemeBtn('#dockBtnDark', 'dark');
 
       $('#syncBtn').onclick = () => {
-        speed = 10;
-        document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.speed === '10')));
+        speed = 25;
+        document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.speed === '25')));
         rider = null;
         riderMesh.visible = false;
         youLabel.hidden = true;
