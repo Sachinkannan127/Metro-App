@@ -10,6 +10,10 @@ The experience is designed around the Thanjavur region and connects:
 - Pattukkottai
 - Nagapattinam
 
+## Preview
+
+![Cauvery Delta Metro dashboard](screenshots/metro-dashboard.png)
+
 ## Features
 
 - Interactive metro network and live service view
@@ -53,6 +57,8 @@ This project is a static web app and does not require a build step.
 │   ├── icon.svg
 │   ├── icon-192.png
 │   └── icon-512.png
+├── screenshots/
+│   └── metro-dashboard.png  # Application dashboard preview
 └── scratch/
     └── generate_icons.js    # Utility used to generate application icons
 ```
