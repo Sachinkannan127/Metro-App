@@ -3165,8 +3165,6 @@
         scene.add(cluster);
       }
 
-      STATIONS.forEach(addStationCultureCluster);
-
       // ==========================================
       // 7B. ROAD NETWORKS & UNDER-TRANSPORT (BUSES, TRUCKS, CARS)
       // ==========================================
@@ -3842,6 +3840,7 @@
       const kalasam = new THREE.MeshBasicMaterial({ color: '#F59E0B' }); // Golden Stupi
       const whiteGop = mat('#F0EDE4');
       const portMetal = mat('#374151');
+      STATIONS.forEach(addStationCultureCluster);
 
       // 1. Thanjavur: Brihadeeswarar Temple (Big Temple / Peruvudaiyar Kovil)
       {
