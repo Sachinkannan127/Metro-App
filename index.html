@@ -6295,7 +6295,7 @@
 
       let lightsOn = true;
       let soundOn = false;
-      let soundCtx = null, soundMaster = null, trainSound = null, trainMotor = null, trainRail = null, roadSound = null, crowdSound = null;
+      let soundCtx = null, soundMaster = null, trainSound = null, trainMotor = null, trainRail = null, trainWheel = null, trainBrake = null, roadSound = null, crowdSound = null, trainMotorOscillators = [];
 
       function createNoiseSource(ctx) {
         const buffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
@@ -6330,26 +6330,56 @@
         trainOsc.connect(trainFilter).connect(trainSound).connect(soundMaster);
         trainOsc.start();
 
-        const motorOsc = soundCtx.createOscillator();
-        const motorFilter = soundCtx.createBiquadFilter();
-        motorFilter.type = 'bandpass';
-        motorFilter.frequency.value = 380;
-        motorFilter.Q.value = 1.5;
+        const motorBus = soundCtx.createGain();
+        motorBus.gain.value = 0.7;
         trainMotor = soundCtx.createGain();
         trainMotor.gain.value = 0;
-        motorOsc.type = 'triangle';
-        motorOsc.frequency.value = 96;
-        motorOsc.connect(motorFilter).connect(trainMotor).connect(soundMaster);
-        motorOsc.start();
+        motorBus.connect(trainMotor).connect(soundMaster);
+        trainMotorOscillators = [];
+        [1, 2.01, 3.02].forEach((multiplier, index) => {
+          const motorOsc = soundCtx.createOscillator();
+          const motorFilter = soundCtx.createBiquadFilter();
+          motorFilter.type = 'bandpass';
+          motorFilter.frequency.value = 240 + index * 170;
+          motorFilter.Q.value = 2.2;
+          motorOsc.type = index === 0 ? 'sawtooth' : 'triangle';
+          motorOsc.frequency.value = 58 * multiplier;
+          motorOsc.detune.value = index * 4;
+          motorOsc.connect(motorFilter).connect(motorBus);
+          motorOsc.start();
+          trainMotorOscillators.push({ oscillator: motorOsc, multiplier });
+        });
 
         const railNoise = createNoiseSource(soundCtx);
         const railFilter = soundCtx.createBiquadFilter();
         railFilter.type = 'lowpass';
-        railFilter.frequency.value = 115;
+        railFilter.frequency.value = 155;
         trainRail = soundCtx.createGain();
         trainRail.gain.value = 0;
         railNoise.connect(railFilter).connect(trainRail).connect(soundMaster);
         railNoise.start();
+
+        const wheelNoise = createNoiseSource(soundCtx);
+        const wheelFilter = soundCtx.createBiquadFilter();
+        wheelFilter.type = 'bandpass';
+        wheelFilter.frequency.value = 920;
+        wheelFilter.Q.value = 0.55;
+        trainWheel = soundCtx.createGain();
+        trainWheel.gain.value = 0;
+        wheelNoise.connect(wheelFilter).connect(trainWheel).connect(soundMaster);
+        wheelNoise.start();
+
+        const brakeOsc = soundCtx.createOscillator();
+        const brakeFilter = soundCtx.createBiquadFilter();
+        brakeFilter.type = 'bandpass';
+        brakeFilter.frequency.value = 1850;
+        brakeFilter.Q.value = 5;
+        brakeOsc.type = 'sawtooth';
+        brakeOsc.frequency.value = 430;
+        trainBrake = soundCtx.createGain();
+        trainBrake.gain.value = 0;
+        brakeOsc.connect(brakeFilter).connect(trainBrake).connect(soundMaster);
+        brakeOsc.start();
 
         const roadNoise = createNoiseSource(soundCtx);
         const roadFilter = soundCtx.createBiquadFilter();
@@ -6376,17 +6406,32 @@
         const now = soundCtx.currentTime;
         const activeTrains = sim.trains.filter(t => t.state !== 'gone').length;
         const activeVehicles = vehicles.filter(v => v.v > 0.01).length;
+        const movingTrains = sim.trains.filter(t => t.state === 'run');
+        const speedRatio = movingTrains.length
+          ? movingTrains.reduce((sum, tr) => sum + clamp(tr.v / VMAX, 0, 1), 0) / movingTrains.length
+          : 0;
+        const brakingRatio = movingTrains.length
+          ? movingTrains.filter(tr => tr.v > 0 && tr.v < VMAX * 0.45).length / movingTrains.length
+          : 0;
         let waiting = 0;
         sim.waiting.forEach(line => line.forEach(dir => { waiting += dir[0] + dir[1]; }));
         const trainLevel = soundOn ? Math.min(0.14, activeTrains * 0.0035) : 0;
-        const motorLevel = soundOn ? Math.min(0.07, activeTrains * 0.0018) : 0;
-        const railLevel = soundOn ? Math.min(0.09, activeTrains * 0.0022) : 0;
+        const motorLevel = soundOn ? Math.min(0.085, activeTrains * 0.0017 * (0.35 + speedRatio * 0.9)) : 0;
+        const railLevel = soundOn ? Math.min(0.10, activeTrains * 0.0021 * (0.45 + speedRatio * 0.8)) : 0;
+        const wheelLevel = soundOn ? Math.min(0.075, activeTrains * 0.0014 * (0.25 + speedRatio * 1.2)) : 0;
+        const brakeLevel = soundOn ? Math.min(0.045, activeTrains * 0.0025 * brakingRatio) : 0;
         const roadLevel = soundOn && roadGroup.visible ? Math.min(0.055, activeVehicles * 0.00075) : 0;
         const crowdLevel = soundOn ? Math.min(0.045, waiting * 0.000003) : 0;
+        const motorPitch = 58 + speedRatio * 105;
         soundMaster.gain.setTargetAtTime(soundOn ? 0.78 : 0.0001, now, 0.18);
         trainSound.gain.setTargetAtTime(trainLevel, now, 0.2);
         trainMotor.gain.setTargetAtTime(motorLevel, now, 0.2);
         trainRail.gain.setTargetAtTime(railLevel, now, 0.25);
+        trainWheel.gain.setTargetAtTime(wheelLevel, now, 0.18);
+        trainBrake.gain.setTargetAtTime(brakeLevel, now, 0.12);
+        trainMotorOscillators.forEach(item => {
+          item.oscillator.frequency.setTargetAtTime(motorPitch * item.multiplier, now, 0.15);
+        });
         roadSound.gain.setTargetAtTime(roadLevel, now, 0.25);
         crowdSound.gain.setTargetAtTime(crowdLevel, now, 0.35);
       }
