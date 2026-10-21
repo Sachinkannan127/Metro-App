@@ -2675,11 +2675,12 @@
       // ==========================================
       // 3. THREE.JS RENDERER & SCENE SETUP
       // ==========================================
+      const isMobile = window.matchMedia('(max-width: 920px)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
       const canvas = $('#scene');
-      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: !isMobile, powerPreference: 'high-performance' });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.25 : 2));
+      renderer.shadowMap.enabled = !isMobile;
+      renderer.shadowMap.type = isMobile ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
 
       const scene = new THREE.Scene();
       scene.background = new THREE.Color('#E8ECE9');
@@ -2694,7 +2695,7 @@
 
       const sun = new THREE.DirectionalLight('#FFF7E6', 0.8);
       sun.castShadow = true;
-      sun.shadow.mapSize.set(2048, 2048);
+      sun.shadow.mapSize.set(isMobile ? 512 : 2048, isMobile ? 512 : 2048);
       sun.shadow.bias = -0.0005;
       sun.shadow.normalBias = 0.02;
       scene.add(sun);
@@ -3281,7 +3282,7 @@
       // ==========================================
       // 7B.2. HIGHWAY STREET POST LIGHTS
       // ==========================================
-      const MAX_STREET_LAMPS = 160;
+      const MAX_STREET_LAMPS = isMobile ? 80 : 160;
       const streetBulbMat = new THREE.MeshBasicMaterial({ color: '#FFFDEB' });
       const streetPoolMat = new THREE.MeshBasicMaterial({
         color: '#FEF08A',
@@ -3528,9 +3529,9 @@
       }
 
       // Under-Transport Vehicles Setup
-      const MAX_BUSES = 24;
-      const MAX_TRUCKS = 26;
-      const MAX_CARS = 36;
+      const MAX_BUSES = isMobile ? 12 : 24;
+      const MAX_TRUCKS = isMobile ? 13 : 26;
+      const MAX_CARS = isMobile ? 18 : 36;
       const TOTAL_VEHICLES = MAX_BUSES + MAX_TRUCKS + MAX_CARS;
 
       // Buses Instanced Meshes (TNSTC & SETC)
@@ -4798,7 +4799,7 @@
       // ==========================================
       // 12. INSTANCED PEOPLE / PASSENGERS
       // ==========================================
-      const MAXP = 4800;
+      const MAXP = isMobile ? 1200 : 4800;
       const pBody = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.07, 0.09, 0.24, 7).translate(0, 0.12, 0), mat('#FFFFFF'), MAXP);
       const pHead = new THREE.InstancedMesh(new THREE.SphereGeometry(0.06, 8, 6).translate(0, 0.29, 0), mat('#422B1E'), MAXP);
       // South Indian vibrant clothing color palette
@@ -6464,7 +6465,7 @@
       // ==========================================
       // 23. MAIN ANIMATION LOOP
       // ==========================================
-      let last = performance.now(), acc1 = 0, acc2 = 0;
+      let last = performance.now(), acc1 = 0, acc2 = 0, labelAcc = 0;
       const tgt = new THREE.Vector3();
 
       function frame(now) {
@@ -6485,8 +6486,10 @@
 
         updateTrainVisuals();
         updateSignals(sim.t);
-        updateRoadTraffic(rdt * speed, (sim.t / 3600) % 24);
-        updatePeople(rdt * Math.min(3, Math.sqrt(speed)), now / 1000);
+        if (!isMobile || (Math.floor(now / 50) % 2 === 0)) {
+          updateRoadTraffic(rdt * speed, (sim.t / 3600) % 24);
+          updatePeople(rdt * Math.min(3, Math.sqrt(speed)), now / 1000);
+        }
         updateDayNightLighting(nowIST());
 
         // Rotate construction cranes on Phase 2 corridors
@@ -6542,7 +6545,11 @@
         }
 
         renderer.render(scene, camera);
-        updateLabels();
+        labelAcc += rdt;
+        if (!isMobile || labelAcc >= 0.08) {
+          labelAcc = 0;
+          updateLabels();
+        }
 
         acc1 += rdt;
         acc2 += rdt;
