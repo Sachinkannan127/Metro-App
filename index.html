@@ -6295,7 +6295,7 @@
 
       let lightsOn = true;
       let soundOn = false;
-      let soundCtx = null, soundMaster = null, trainSound = null, trainMotor = null, trainRail = null, trainWheel = null, trainBrake = null, trainRecording = null, trainRecordingGain = null, roadSound = null, crowdSound = null, trainMotorOscillators = [];
+      let soundCtx = null, soundMaster = null, roadSound = null, crowdSound = null, peopleChatter = null, peopleMovement = null;
 
       function createNoiseSource(ctx) {
         const buffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
@@ -6318,88 +6318,6 @@
         soundMaster = soundCtx.createGain();
         soundMaster.gain.value = 0.0001;
         soundMaster.connect(soundCtx.destination);
-        trainRecordingGain = soundCtx.createGain();
-        trainRecordingGain.gain.value = 0;
-        trainRecordingGain.connect(soundMaster);
-        fetch('./audio/metro-train-cc0.wav')
-          .then(response => {
-            if (!response.ok) throw new Error(`Metro recording request failed: ${response.status}`);
-            return response.arrayBuffer();
-          })
-          .then(data => soundCtx.decodeAudioData(data))
-          .then(buffer => {
-            if (!soundCtx || !trainRecordingGain) return;
-            const source = soundCtx.createBufferSource();
-            source.buffer = buffer;
-            source.loop = true;
-            source.connect(trainRecordingGain);
-            source.start();
-            trainRecording = source;
-          })
-          .catch(error => console.warn('Metro recording unavailable:', error));
-
-        const trainOsc = soundCtx.createOscillator();
-        const trainFilter = soundCtx.createBiquadFilter();
-        trainFilter.type = 'lowpass';
-        trainFilter.frequency.value = 230;
-        trainOsc.type = 'sawtooth';
-        trainOsc.frequency.value = 48;
-        trainSound = soundCtx.createGain();
-        trainSound.gain.value = 0;
-        trainOsc.connect(trainFilter).connect(trainSound).connect(soundMaster);
-        trainOsc.start();
-
-        const motorBus = soundCtx.createGain();
-        motorBus.gain.value = 0.7;
-        trainMotor = soundCtx.createGain();
-        trainMotor.gain.value = 0;
-        motorBus.connect(trainMotor).connect(soundMaster);
-        trainMotorOscillators = [];
-        [1, 2.01, 3.02].forEach((multiplier, index) => {
-          const motorOsc = soundCtx.createOscillator();
-          const motorFilter = soundCtx.createBiquadFilter();
-          motorFilter.type = 'bandpass';
-          motorFilter.frequency.value = 240 + index * 170;
-          motorFilter.Q.value = 2.2;
-          motorOsc.type = index === 0 ? 'sawtooth' : 'triangle';
-          motorOsc.frequency.value = 58 * multiplier;
-          motorOsc.detune.value = index * 4;
-          motorOsc.connect(motorFilter).connect(motorBus);
-          motorOsc.start();
-          trainMotorOscillators.push({ oscillator: motorOsc, multiplier });
-        });
-
-        const railNoise = createNoiseSource(soundCtx);
-        const railFilter = soundCtx.createBiquadFilter();
-        railFilter.type = 'lowpass';
-        railFilter.frequency.value = 155;
-        trainRail = soundCtx.createGain();
-        trainRail.gain.value = 0;
-        railNoise.connect(railFilter).connect(trainRail).connect(soundMaster);
-        railNoise.start();
-
-        const wheelNoise = createNoiseSource(soundCtx);
-        const wheelFilter = soundCtx.createBiquadFilter();
-        wheelFilter.type = 'bandpass';
-        wheelFilter.frequency.value = 920;
-        wheelFilter.Q.value = 0.55;
-        trainWheel = soundCtx.createGain();
-        trainWheel.gain.value = 0;
-        wheelNoise.connect(wheelFilter).connect(trainWheel).connect(soundMaster);
-        wheelNoise.start();
-
-        const brakeOsc = soundCtx.createOscillator();
-        const brakeFilter = soundCtx.createBiquadFilter();
-        brakeFilter.type = 'bandpass';
-        brakeFilter.frequency.value = 1850;
-        brakeFilter.Q.value = 5;
-        brakeOsc.type = 'sawtooth';
-        brakeOsc.frequency.value = 430;
-        trainBrake = soundCtx.createGain();
-        trainBrake.gain.value = 0;
-        brakeOsc.connect(brakeFilter).connect(trainBrake).connect(soundMaster);
-        brakeOsc.start();
-
         const roadNoise = createNoiseSource(soundCtx);
         const roadFilter = soundCtx.createBiquadFilter();
         roadFilter.type = 'lowpass';
@@ -6418,6 +6336,25 @@
         crowdSound.gain.value = 0;
         crowdNoise.connect(crowdFilter).connect(crowdSound).connect(soundMaster);
         crowdNoise.start();
+
+        const chatterNoise = createNoiseSource(soundCtx);
+        const chatterFilter = soundCtx.createBiquadFilter();
+        chatterFilter.type = 'bandpass';
+        chatterFilter.frequency.value = 1450;
+        chatterFilter.Q.value = 0.45;
+        peopleChatter = soundCtx.createGain();
+        peopleChatter.gain.value = 0;
+        chatterNoise.connect(chatterFilter).connect(peopleChatter).connect(soundMaster);
+        chatterNoise.start();
+
+        const movementNoise = createNoiseSource(soundCtx);
+        const movementFilter = soundCtx.createBiquadFilter();
+        movementFilter.type = 'highpass';
+        movementFilter.frequency.value = 2600;
+        peopleMovement = soundCtx.createGain();
+        peopleMovement.gain.value = 0;
+        movementNoise.connect(movementFilter).connect(peopleMovement).connect(soundMaster);
+        movementNoise.start();
       }
 
       function updateAmbientSound() {
@@ -6425,36 +6362,17 @@
         const now = soundCtx.currentTime;
         const activeTrains = sim.trains.filter(t => t.state !== 'gone').length;
         const activeVehicles = vehicles.filter(v => v.v > 0.01).length;
-        const movingTrains = sim.trains.filter(t => t.state === 'run');
-        const speedRatio = movingTrains.length
-          ? movingTrains.reduce((sum, tr) => sum + clamp(tr.v / VMAX, 0, 1), 0) / movingTrains.length
-          : 0;
-        const brakingRatio = movingTrains.length
-          ? movingTrains.filter(tr => tr.v > 0 && tr.v < VMAX * 0.45).length / movingTrains.length
-          : 0;
         let waiting = 0;
         sim.waiting.forEach(line => line.forEach(dir => { waiting += dir[0] + dir[1]; }));
-        const trainLevel = soundOn ? Math.min(0.14, activeTrains * 0.0035) : 0;
-        const motorLevel = soundOn ? Math.min(0.085, activeTrains * 0.0017 * (0.35 + speedRatio * 0.9)) : 0;
-        const railLevel = soundOn ? Math.min(0.10, activeTrains * 0.0021 * (0.45 + speedRatio * 0.8)) : 0;
-        const wheelLevel = soundOn ? Math.min(0.075, activeTrains * 0.0014 * (0.25 + speedRatio * 1.2)) : 0;
-        const brakeLevel = soundOn ? Math.min(0.045, activeTrains * 0.0025 * brakingRatio) : 0;
-        const recordingLevel = soundOn ? Math.min(0.18, activeTrains * 0.0045) : 0;
         const roadLevel = soundOn && roadGroup.visible ? Math.min(0.055, activeVehicles * 0.00075) : 0;
-        const crowdLevel = soundOn ? Math.min(0.045, waiting * 0.000003) : 0;
-        const motorPitch = 58 + speedRatio * 105;
+        const crowdLevel = soundOn ? Math.min(0.075, waiting * 0.000005 + activeTrains * 0.0015) : 0;
+        const chatterLevel = soundOn ? Math.min(0.065, waiting * 0.0000035 + activeTrains * 0.001) : 0;
+        const movementLevel = soundOn ? Math.min(0.035, activeTrains * 0.0008) : 0;
         soundMaster.gain.setTargetAtTime(soundOn ? 0.78 : 0.0001, now, 0.18);
-        trainSound.gain.setTargetAtTime(trainLevel, now, 0.2);
-        trainMotor.gain.setTargetAtTime(motorLevel, now, 0.2);
-        trainRail.gain.setTargetAtTime(railLevel, now, 0.25);
-        trainWheel.gain.setTargetAtTime(wheelLevel, now, 0.18);
-        trainBrake.gain.setTargetAtTime(brakeLevel, now, 0.12);
-        if (trainRecordingGain) trainRecordingGain.gain.setTargetAtTime(recordingLevel, now, 0.3);
-        trainMotorOscillators.forEach(item => {
-          item.oscillator.frequency.setTargetAtTime(motorPitch * item.multiplier, now, 0.15);
-        });
         roadSound.gain.setTargetAtTime(roadLevel, now, 0.25);
         crowdSound.gain.setTargetAtTime(crowdLevel, now, 0.35);
+        peopleChatter.gain.setTargetAtTime(chatterLevel, now, 0.3);
+        peopleMovement.gain.setTargetAtTime(movementLevel, now, 0.2);
       }
 
       const cSound = $('#chipSound');
