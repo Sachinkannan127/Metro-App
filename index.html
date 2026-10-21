@@ -4093,6 +4093,68 @@
         scene.add(swm);
       }
 
+      // 13. Additional Delta temples and bazaar streets
+      function addGopuramTemple(lat, lon, colors, height = 6) {
+        const p = G(lat, lon);
+        const temple = new THREE.Group();
+        temple.position.set(p.x, 0, p.z);
+        for (let i = 0; i < height; i++) {
+          const w = 2.7 - i * 0.28, d = 1.65 - i * 0.14;
+          const tier = new THREE.Mesh(
+            new THREE.BoxGeometry(w, 0.42, d).translate(0, 0.21 + i * 0.42, 0),
+            mat(colors[i % colors.length])
+          );
+          tier.castShadow = true;
+          temple.add(tier);
+        }
+        const finial = new THREE.Mesh(
+          new THREE.ConeGeometry(0.18, 0.42, 6).translate(0, height * 0.42 + 0.35, 0),
+          kalasam
+        );
+        const court = new THREE.Mesh(
+          new THREE.BoxGeometry(5.8, 0.22, 4.6).translate(0, 0.11, 2.2),
+          mat('#E2D7C3')
+        );
+        court.receiveShadow = true;
+        temple.add(finial, court);
+        scene.add(temple);
+      }
+
+      addGopuramTemple(10.938, 79.356, ['#F59E0B', '#E2C485'], 8); // Darasuram Airavatesvara
+      addGopuramTemple(10.929, 79.342, ['#EA580C', '#FBBF24'], 6); // Patteeswaram Dhenupureeswarar
+      addGopuramTemple(10.888, 79.825, ['#DC2626', '#F59E0B'], 7); // Thirunallar Saneeswaran
+      addGopuramTemple(10.715, 79.717, ['#059669', '#FDE68A'], 6); // Thiruthuraipoondi temple street
+
+      function addBazaar(lat, lon, signColor = '#1E3A8A') {
+        const p = G(lat, lon);
+        const bazaar = new THREE.Group();
+        bazaar.position.set(p.x, 0, p.z);
+        const walls = ['#F8FAFC', '#FEF9C3', '#F3F4F6', '#FFF1F2', '#EFF6FF'];
+        const awnings = ['#DC2626', '#2563EB', '#EAB308', '#059669', '#EA580C', '#7C3AED', '#DB2777'];
+        for (let i = -2; i <= 2; i++) {
+          const shop = new THREE.Mesh(
+            new THREE.BoxGeometry(1.35, 0.72, 1.05).translate(i * 1.55, 0.36, 0),
+            mat(walls[(i + 2) % walls.length])
+          );
+          const awning = new THREE.Mesh(
+            new THREE.BoxGeometry(1.48, 0.08, 0.45).translate(i * 1.55, 0.78, -0.58),
+            mat(awnings[(i + 3) % awnings.length])
+          );
+          const sign = new THREE.Mesh(
+            new THREE.BoxGeometry(1.08, 0.24, 0.04).translate(i * 1.55, 0.92, -0.56),
+            mat(signColor)
+          );
+          shop.castShadow = awning.castShadow = sign.castShadow = true;
+          bazaar.add(shop, awning, sign);
+        }
+        scene.add(bazaar);
+      }
+
+      addBazaar(10.790, 79.140, '#991B1B'); // Thanjavur South Street
+      addBazaar(10.960, 79.380, '#1E3A8A'); // Kumbakonam temple market
+      addBazaar(10.665, 79.452, '#064E3B'); // Mannargudi bazaar
+      addBazaar(10.766, 79.842, '#78350F'); // Nagapattinam harbour market
+
       // ==========================================
       // 9. PHASE 2 CORRIDORS & CONSTRUCTION CRANES
       // ==========================================
@@ -4229,7 +4291,15 @@
         G(10.680, 79.850), // Velankanni Basilica
         G(10.270, 79.310), // Manora Fort
         G(10.765, 79.225), // Mariamman Temple
-        G(10.725, 79.162)  // Vallam University clock
+        G(10.725, 79.162),  // Vallam University clock
+        G(10.938, 79.356),  // Darasuram Airavatesvara
+        G(10.929, 79.342),  // Patteeswaram Dhenupureeswarar
+        G(10.888, 79.825),  // Thirunallar Saneeswaran
+        G(10.715, 79.717),  // Thiruthuraipoondi temple street
+        G(10.790, 79.140),  // Thanjavur South Street
+        G(10.960, 79.380),  // Kumbakonam temple market
+        G(10.665, 79.452),  // Mannargudi bazaar
+        G(10.766, 79.842)   // Nagapattinam harbour market
       ].forEach(p => markCell(p.x, p.z, 5.0, 5));
 
       // --- STEP A: Roadside Commercial Shops & Roadside Houses ---
@@ -5437,6 +5507,14 @@
         { t: 'Adirampattinam Lagoon', lat: 10.340, lon: 79.385, cls: 'lm' },
         { t: 'Manora Fort', lat: 10.270, lon: 79.310, cls: 'lm landmark' },
         { t: 'Punnainallur Mariamman Temple', lat: 10.765, lon: 79.225, cls: 'lm landmark' },
+        { t: 'Darasuram Airavatesvara Temple', lat: 10.938, lon: 79.356, cls: 'lm landmark' },
+        { t: 'Patteeswaram Dhenupureeswarar Temple', lat: 10.929, lon: 79.342, cls: 'lm landmark' },
+        { t: 'Thirunallar Saneeswaran Temple', lat: 10.888, lon: 79.825, cls: 'lm landmark' },
+        { t: 'Thiruthuraipoondi Temple Street', lat: 10.715, lon: 79.717, cls: 'lm landmark' },
+        { t: 'Thanjavur South Street Bazaar', lat: 10.790, lon: 79.140, cls: 'lm' },
+        { t: 'Kumbakonam Temple Market', lat: 10.960, lon: 79.380, cls: 'lm' },
+        { t: 'Mannargudi Bazaar', lat: 10.665, lon: 79.452, cls: 'lm' },
+        { t: 'Nagapattinam Harbour Market', lat: 10.766, lon: 79.842, cls: 'lm' },
         { t: 'Vallam Campus Corridor', lat: 10.725, lon: 79.162, cls: 'lm' },
         { t: 'Karambayam Trade Market', lat: 10.475, lon: 79.295, cls: 'lm' },
         { t: 'Muthupet Mangroves', lat: 10.380, lon: 79.520, cls: 'lm' },
