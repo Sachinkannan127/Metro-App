@@ -3086,6 +3086,87 @@
         });
       });
 
+      // Station-area Tamil temples and storefronts: five of each at every metro place.
+      const stationTempleNames = [
+        'விநாயகர் கோவில்',
+        'மாரியம்மன் கோவில்',
+        'முருகன் கோவில்',
+        'சிவன் கோவில்',
+        'பெருமாள் கோவில்'
+      ];
+      const stationShopNames = [
+        'மளிகை கடை',
+        'தேநீர் கடை',
+        'பூக்கடை',
+        'இனிப்பு கடை',
+        'பழக்கடை'
+      ];
+      const stationTempleColors = ['#F59E0B', '#DC2626', '#EAB308', '#059669', '#7C3AED'];
+      const stationShopColors = ['#991B1B', '#1E3A8A', '#064E3B', '#78350F', '#7C2D12'];
+
+      function addStationCultureCluster(S) {
+        const cluster = new THREE.Group();
+        cluster.position.set(S.x, 0, S.z);
+        const radius = 8.5;
+
+        for (let i = 0; i < 5; i++) {
+          const angle = (i / 5) * Math.PI * 2 + 0.18;
+          const temple = new THREE.Group();
+          temple.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
+          temple.rotation.y = -angle;
+
+          for (let tier = 0; tier < 3; tier++) {
+            const width = 1.05 - tier * 0.18;
+            const towerTier = new THREE.Mesh(
+              new THREE.BoxGeometry(width, 0.32, width * 0.72).translate(0, 0.16 + tier * 0.32, 0),
+              mat(stationTempleColors[(i + tier) % stationTempleColors.length])
+            );
+            towerTier.castShadow = true;
+            temple.add(towerTier);
+          }
+
+          const finial = new THREE.Mesh(
+            new THREE.ConeGeometry(0.11, 0.28, 6).translate(0, 1.12, 0),
+            kalasam
+          );
+          const shrine = new THREE.Mesh(
+            new THREE.BoxGeometry(1.35, 0.18, 1.05).translate(0, 0.09, 0.65),
+            mat('#E2D7C3')
+          );
+          temple.userData.landmarkName = `${S.name} · ${stationTempleNames[i]}`;
+          temple.add(finial, shrine);
+          cluster.add(temple);
+        }
+
+        for (let i = 0; i < 5; i++) {
+          const angle = (i / 5) * Math.PI * 2 + 0.50;
+          const shop = new THREE.Group();
+          shop.position.set(Math.cos(angle) * (radius + 3.4), 0, Math.sin(angle) * (radius + 3.4));
+          shop.rotation.y = -angle;
+
+          const body = new THREE.Mesh(
+            new THREE.BoxGeometry(1.45, 0.78, 1.05).translate(0, 0.39, 0),
+            mat(['#F8FAFC', '#FEF9C3', '#FFF1F2', '#EFF6FF', '#F3F4F6'][i])
+          );
+          const awning = new THREE.Mesh(
+            new THREE.BoxGeometry(1.58, 0.09, 0.42).translate(0, 0.82, -0.58),
+            mat(['#DC2626', '#2563EB', '#EAB308', '#059669', '#EA580C'][i])
+          );
+          const sign = new THREE.Mesh(
+            new THREE.BoxGeometry(1.20, 0.24, 0.04).translate(0, 0.94, -0.56),
+            mat(stationShopColors[i])
+          );
+          shop.userData.landmarkName = `${S.name} · ${stationShopNames[i]}`;
+          body.castShadow = awning.castShadow = sign.castShadow = true;
+          shop.add(body, awning, sign);
+          cluster.add(shop);
+        }
+
+        scene.add(cluster);
+      }
+
+      STATIONS.forEach(addStationCultureCluster);
+
       // ==========================================
       // 7B. ROAD NETWORKS & UNDER-TRANSPORT (BUSES, TRUCKS, CARS)
       // ==========================================
