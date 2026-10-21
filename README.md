@@ -24,7 +24,6 @@ The experience is designed around the Thanjavur region and connects:
 - Installable PWA experience
 - Offline application-shell caching through a service worker
 - Tamil-friendly typography and localization-ready interface
-- Procedural station crowd and people ambience
 
 ## Getting started
 
@@ -78,7 +77,3 @@ For the best PWA behavior:
 ## License
 
 No license has been specified for this repository yet.
-
-### Audio
-
-The Sound control provides procedural station ambience, including crowd presence, conversation texture, and people movement. No external train recording is required.

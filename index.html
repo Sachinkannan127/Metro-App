@@ -2085,15 +2085,6 @@
             </svg>
           </span>3D Lights <span class="n" id="nLights">ON</span>
         </button>
-        <button class="chip" id="chipSound" aria-pressed="false"
-          title="Toggle realistic metro, people and road vehicle sounds">
-          <span class="ic" style="background:#0F766E">
-            <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-              <path d="M2 5v2h2l2.5 2V3L4 5H2Z" fill="#fff" />
-              <path d="M8 4.2c.7.45 1.1 1.05 1.1 1.8S8.7 7.35 8 7.8M9.4 2.8c1.1.8 1.7 1.85 1.7 3.2s-.6 2.4-1.7 3.2" stroke="#fff" stroke-width="1.1" stroke-linecap="round" />
-            </svg>
-          </span>Sound <span class="n" id="nSound">OFF</span>
-        </button>
       </div>
     </header>
 
@@ -6294,98 +6285,6 @@
       }
 
       let lightsOn = true;
-      let soundOn = false;
-      let soundCtx = null, soundMaster = null, roadSound = null, crowdSound = null, peopleChatter = null, peopleMovement = null;
-
-      function createNoiseSource(ctx) {
-        const buffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-        const source = ctx.createBufferSource();
-        source.buffer = buffer;
-        source.loop = true;
-        return source;
-      }
-
-      function startAmbientSound() {
-        if (soundCtx) {
-          if (soundCtx.state === 'suspended') soundCtx.resume();
-          return;
-        }
-        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContextClass) return;
-        soundCtx = new AudioContextClass();
-        soundMaster = soundCtx.createGain();
-        soundMaster.gain.value = 0.0001;
-        soundMaster.connect(soundCtx.destination);
-        const roadNoise = createNoiseSource(soundCtx);
-        const roadFilter = soundCtx.createBiquadFilter();
-        roadFilter.type = 'lowpass';
-        roadFilter.frequency.value = 520;
-        roadSound = soundCtx.createGain();
-        roadSound.gain.value = 0;
-        roadNoise.connect(roadFilter).connect(roadSound).connect(soundMaster);
-        roadNoise.start();
-
-        const crowdNoise = createNoiseSource(soundCtx);
-        const crowdFilter = soundCtx.createBiquadFilter();
-        crowdFilter.type = 'bandpass';
-        crowdFilter.frequency.value = 720;
-        crowdFilter.Q.value = 0.7;
-        crowdSound = soundCtx.createGain();
-        crowdSound.gain.value = 0;
-        crowdNoise.connect(crowdFilter).connect(crowdSound).connect(soundMaster);
-        crowdNoise.start();
-
-        const chatterNoise = createNoiseSource(soundCtx);
-        const chatterFilter = soundCtx.createBiquadFilter();
-        chatterFilter.type = 'bandpass';
-        chatterFilter.frequency.value = 1450;
-        chatterFilter.Q.value = 0.45;
-        peopleChatter = soundCtx.createGain();
-        peopleChatter.gain.value = 0;
-        chatterNoise.connect(chatterFilter).connect(peopleChatter).connect(soundMaster);
-        chatterNoise.start();
-
-        const movementNoise = createNoiseSource(soundCtx);
-        const movementFilter = soundCtx.createBiquadFilter();
-        movementFilter.type = 'highpass';
-        movementFilter.frequency.value = 2600;
-        peopleMovement = soundCtx.createGain();
-        peopleMovement.gain.value = 0;
-        movementNoise.connect(movementFilter).connect(peopleMovement).connect(soundMaster);
-        movementNoise.start();
-      }
-
-      function updateAmbientSound() {
-        if (!soundCtx || !soundMaster) return;
-        const now = soundCtx.currentTime;
-        const activeTrains = sim.trains.filter(t => t.state !== 'gone').length;
-        const activeVehicles = vehicles.filter(v => v.v > 0.01).length;
-        let waiting = 0;
-        sim.waiting.forEach(line => line.forEach(dir => { waiting += dir[0] + dir[1]; }));
-        const roadLevel = soundOn && roadGroup.visible ? Math.min(0.055, activeVehicles * 0.00075) : 0;
-        const crowdLevel = soundOn ? Math.min(0.075, waiting * 0.000005 + activeTrains * 0.0015) : 0;
-        const chatterLevel = soundOn ? Math.min(0.065, waiting * 0.0000035 + activeTrains * 0.001) : 0;
-        const movementLevel = soundOn ? Math.min(0.035, activeTrains * 0.0008) : 0;
-        soundMaster.gain.setTargetAtTime(soundOn ? 0.78 : 0.0001, now, 0.18);
-        roadSound.gain.setTargetAtTime(roadLevel, now, 0.25);
-        crowdSound.gain.setTargetAtTime(crowdLevel, now, 0.35);
-        peopleChatter.gain.setTargetAtTime(chatterLevel, now, 0.3);
-        peopleMovement.gain.setTargetAtTime(movementLevel, now, 0.2);
-      }
-
-      const cSound = $('#chipSound');
-      if (cSound) {
-        cSound.onclick = () => {
-          startAmbientSound();
-          soundOn = !soundOn;
-          cSound.setAttribute('aria-pressed', String(soundOn));
-          $('#nSound').textContent = soundOn ? 'ON' : 'OFF';
-          updateAmbientSound();
-          toast(soundOn ? '🔊 Metro, people & road sounds: <b>ON</b>' : '🔇 Ambient sounds: <b>OFF</b>');
-        };
-      }
 
       function updateAllLightsVisibility() {
         const isDark = (currentTheme === 'dark');
@@ -6587,7 +6486,6 @@
         updateTrainVisuals();
         updateSignals(sim.t);
         updateRoadTraffic(rdt * speed, (sim.t / 3600) % 24);
-        updateAmbientSound();
         updatePeople(rdt * Math.min(3, Math.sqrt(speed)), now / 1000);
         updateDayNightLighting(nowIST());
 
