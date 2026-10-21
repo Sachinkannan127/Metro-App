@@ -38,7 +38,6 @@
       --dark: #1E232A;
       --chip: #F1F4F6;
       --sea: #4582A4;
-      --paddy: #88B976;
       --gold: #EAB308;
       --display: "Archivo", system-ui, -apple-system, sans-serif;
       --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
@@ -4282,7 +4281,7 @@
       const SHOP_AWNING_COLORS = ['#DC2626', '#2563EB', '#EAB308', '#059669', '#EA580C', '#7C3AED', '#DB2777'].map(c => new THREE.Color(c));
       const SHOP_SIGN_COLORS = ['#1E293B', '#991B1B', '#1E3A8A', '#064E3B', '#78350F'].map(c => new THREE.Color(c));
 
-      const houseList = [], aptList = [], shopList = [], palms = [], paddy = [], billboardList = [];
+      const houseList = [], aptList = [], shopList = [], palms = [], billboardList = [];
 
       // High-speed spatial occupancy grid to guarantee zero clipping with roads, rivers, rail, or stations
       const CS = 1.6;
@@ -4510,17 +4509,6 @@
             if (rnd() < 0.75) palms.push([jx + rr(-3.2, 3.2), jz + rr(-3.2, 3.2), rr(0.85, 1.35)]);
             if (rnd() < 0.45) palms.push([jx + rr(-3.2, 3.2), jz + rr(-3.2, 3.2), rr(0.75, 1.15)]);
 
-          } else if (roll < 0.88) {
-            // Lush green paddy field patch in agricultural zones
-            paddy.push([
-              jx,
-              jz,
-              STEP_X * rr(0.78, 1.12),
-              STEP_Z * rr(0.78, 1.12),
-              rr(-0.08, 0.08),
-              rr(0.55, 1.0)
-            ]);
-            if (rnd() < 0.35) palms.push([jx + rr(-2.5, 2.5), jz + rr(-2.5, 2.5), rr(0.85, 1.3)]);
           } else {
             // Coconut palm grove
             palms.push([jx + rr(-2.0, 2.0), jz + rr(-2.0, 2.0), rr(0.85, 1.35)]);
@@ -4703,77 +4691,6 @@
       });
       pc.castShadow = true;
       scene.add(pt, pc);
-
-      // 5. Realistic Delta Paddy Fields: water plots, earthen bunds and rice rows
-      const fieldWater = new THREE.InstancedMesh(
-        new THREE.BoxGeometry(1, 0.025, 1).translate(0, 0.0125, 0),
-        new THREE.MeshStandardMaterial({
-          color: '#78B7A0',
-          roughness: 0.18,
-          metalness: 0.08,
-          transparent: true,
-          opacity: 0.82
-        }),
-        Math.max(1, paddy.length)
-      );
-      const fieldSoil = new THREE.InstancedMesh(
-        new THREE.BoxGeometry(1, 0.035, 1).translate(0, 0.0175, 0),
-        mat('#8A7654'),
-        Math.max(1, paddy.length)
-      );
-      const fieldBund = new THREE.InstancedMesh(
-        new THREE.BoxGeometry(1, 0.10, 0.18).translate(0, 0.05, 0),
-        mat('#8D7652'),
-        Math.max(1, paddy.length * 4)
-      );
-      const riceRows = new THREE.InstancedMesh(
-        new THREE.BoxGeometry(0.07, 0.22, 1).translate(0, 0.11, 0),
-        new THREE.MeshStandardMaterial({ color: '#5F9F55', roughness: 0.82 }),
-        Math.max(1, paddy.length * 4)
-      );
-      const WATER_COLORS = ['#79B9A2', '#86C4AD', '#6FAE9A', '#9BC9AF'].map(c => new THREE.Color(c));
-      const SOIL_COLORS = ['#88724E', '#967E57', '#7C6849'].map(c => new THREE.Color(c));
-      const RICE_COLORS = ['#4D914A', '#62A653', '#78B85A', '#3F8244'].map(c => new THREE.Color(c));
-
-      paddy.forEach((p, i) => {
-        const [x, z, width, depth, rotation, growth] = p;
-        const innerWidth = width * 0.88;
-        const innerDepth = depth * 0.86;
-        setInst(fieldSoil, i, x, 0.025, z, rotation, innerWidth, 1, innerDepth);
-        setInst(fieldWater, i, x, 0.065, z, rotation, innerWidth, 1, innerDepth);
-        fieldSoil.setColorAt(i, SOIL_COLORS[i % SOIL_COLORS.length]);
-        fieldWater.setColorAt(i, WATER_COLORS[(i * 3) % WATER_COLORS.length]);
-
-        const c = Math.cos(rotation), s = Math.sin(rotation);
-        const toWorld = (lx, lz) => [x + lx * c + lz * s, z - lx * s + lz * c];
-        const bundIndex = i * 4;
-        const halfW = width * 0.49, halfD = depth * 0.49;
-        const edges = [
-          [0, -halfD, width, 0],
-          [0, halfD, width, 0],
-          [-halfW, 0, depth, Math.PI / 2],
-          [halfW, 0, depth, Math.PI / 2]
-        ];
-        edges.forEach((edge, edgeIndex) => {
-          const pos = toWorld(edge[0], edge[1]);
-          setInst(fieldBund, bundIndex + edgeIndex, pos[0], 0.06, pos[1], rotation + edge[3], edge[2], 1, 1);
-          fieldBund.setColorAt(bundIndex + edgeIndex, SOIL_COLORS[(i + edgeIndex) % SOIL_COLORS.length]);
-        });
-
-        const rowCount = 4;
-        for (let row = 0; row < rowCount; row++) {
-          const localX = -width * 0.30 + row * width * 0.20;
-          const pos = toWorld(localX, 0);
-          setInst(riceRows, bundIndex + row, pos[0], 0.08 + growth * 0.08, pos[1], rotation, 1, growth, innerDepth);
-          riceRows.setColorAt(bundIndex + row, RICE_COLORS[(i + row) % RICE_COLORS.length]);
-        }
-      });
-      [fieldWater, fieldSoil, fieldBund, riceRows].forEach(m => {
-        m.castShadow = m.receiveShadow = true;
-        m.instanceMatrix.needsUpdate = true;
-        if (m.instanceColor) m.instanceColor.needsUpdate = true;
-        scene.add(m);
-      });
 
       // ==========================================
       // 11. TRAINS (4-COACH ARTICULATED METRO)
