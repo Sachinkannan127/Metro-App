@@ -2111,6 +2111,14 @@
             </svg>
           </span>3D Lights <span class="n" id="nLights">ON</span>
         </button>
+        <button class="chip" id="chipQuality" aria-pressed="true"
+          title="Toggle Graphics Quality (Ultra HD vs Balanced)">
+          <span class="ic" style="background:#8B5CF6">
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+              <path d="M6 1l1.3 3.3L11 5.5l-2.7 2.3.8 3.7L6 9.6 2.9 11.5l.8-3.7L1 5.5l3.7-1.2L6 1z" fill="#fff" />
+            </svg>
+          </span>Quality <span class="n" id="nQuality">ULTRA</span>
+        </button>
       </div>
     </header>
 
@@ -2148,6 +2156,14 @@
         </button>
         <button id="dockBtnDark" data-theme="dark" aria-pressed="false" title="Set Dark Mode">
           <span>🌙</span> Dark
+        </button>
+      </div>
+      <div class="seg quality-seg" role="group" aria-label="Graphics Quality selector">
+        <button id="dockBtnQualUltra" data-quality="ultra" aria-pressed="true" title="Ultra HD: 2× Retina resolution, soft shadows, tone mapping">
+          <span>✨</span> Ultra
+        </button>
+        <button id="dockBtnQualBalanced" data-quality="balanced" aria-pressed="false" title="Balanced: High performance & battery efficiency">
+          <span>⚡</span> Eco
         </button>
       </div>
       <button class="btn ghost" id="syncBtn" type="button" style="border-radius:999px">Sync now</button>
@@ -2262,6 +2278,13 @@
         <div class="seg theme-seg" role="group" aria-label="Mobile Theme selector">
           <button id="mBtnLight" data-theme="light" aria-pressed="true">☀️ Light</button>
           <button id="mBtnDark" data-theme="dark" aria-pressed="false">🌙 Dark</button>
+        </div>
+      </div>
+      <div class="quick-row">
+        <span class="quick-label">Graphics Quality</span>
+        <div class="seg quality-seg" role="group" aria-label="Mobile Quality selector">
+          <button id="mBtnQualUltra" data-quality="ultra" aria-pressed="true">✨ Ultra HD</button>
+          <button id="mBtnQualBalanced" data-quality="balanced" aria-pressed="false">⚡ Balanced</button>
         </div>
       </div>
       <div class="quick-row">
@@ -2703,26 +2726,29 @@
       // ==========================================
       const isMobile = window.matchMedia('(max-width: 920px)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
       const canvas = $('#scene');
-      const renderer = new THREE.WebGLRenderer({ canvas, antialias: !isMobile, powerPreference: 'high-performance' });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1 : 2));
-      renderer.shadowMap.enabled = !isMobile;
-      renderer.shadowMap.type = isMobile ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2.0));
+      renderer.outputEncoding = THREE.sRGBEncoding;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.06;
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
       const scene = new THREE.Scene();
       scene.background = new THREE.Color('#E8ECE9');
-      scene.fog = new THREE.FogExp2('#E8ECE9', isMobile ? 0.0024 : 0.0016);
+      scene.fog = new THREE.FogExp2('#E8ECE9', 0.0016);
 
       const VIEW = 85;
       const camera = new THREE.OrthographicCamera(-VIEW, VIEW, VIEW, -VIEW, -3000, 5000);
 
       // Lighting
-      const hemiLight = new THREE.HemisphereLight('#FFFFFF', '#B8C4B8', 0.85);
+      const hemiLight = new THREE.HemisphereLight('#FFFFFF', '#B8C4B8', 0.88);
       scene.add(hemiLight);
 
-      const sun = new THREE.DirectionalLight('#FFF7E6', 0.8);
-      sun.castShadow = !isMobile;
-      sun.shadow.mapSize.set(isMobile ? 512 : 2048, isMobile ? 512 : 2048);
-      sun.shadow.bias = -0.0005;
+      const sun = new THREE.DirectionalLight('#FFF7E6', 0.92);
+      sun.castShadow = true;
+      sun.shadow.mapSize.set(2048, 2048);
+      sun.shadow.bias = -0.0003;
       sun.shadow.normalBias = 0.02;
       scene.add(sun);
       scene.add(sun.target);
@@ -4733,17 +4759,19 @@
 
       function destinationTexture(text) {
         const c = document.createElement('canvas');
-        c.width = 256;
-        c.height = 64;
+        c.width = 512;
+        c.height = 128;
         const ctx = c.getContext('2d');
         ctx.fillStyle = '#07110D';
         ctx.fillRect(0, 0, c.width, c.height);
         ctx.fillStyle = '#39FF88';
-        ctx.font = '700 25px Arial';
+        ctx.font = '700 50px Arial, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(text.toUpperCase().slice(0, 18), c.width / 2, c.height / 2);
-        return new THREE.CanvasTexture(c);
+        const tex = new THREE.CanvasTexture(c);
+        tex.anisotropy = 4;
+        return tex;
       }
 
       for (let i = 0; i < MAXT * 2; i++) {
@@ -5262,14 +5290,16 @@
               const targetText = dirName(tr.li, tr.dir).toUpperCase().slice(0, 18);
               if (board.userData.text !== targetText) {
                 board.userData.text = targetText;
-                const boardCtx = board.material.map.image.getContext('2d');
+                const canvas = board.material.map.image;
+                if (canvas.width !== 512) { canvas.width = 512; canvas.height = 128; }
+                const boardCtx = canvas.getContext('2d');
                 boardCtx.fillStyle = '#07110D';
-                boardCtx.fillRect(0, 0, 256, 64);
+                boardCtx.fillRect(0, 0, 512, 128);
                 boardCtx.fillStyle = '#39FF88';
-                boardCtx.font = '700 25px Arial';
+                boardCtx.font = '700 50px Arial, sans-serif';
                 boardCtx.textAlign = 'center';
                 boardCtx.textBaseline = 'middle';
-                boardCtx.fillText(targetText, 128, 32);
+                boardCtx.fillText(targetText, 256, 64);
                 board.material.map.needsUpdate = true;
               }
               board.visible = true;
@@ -6403,6 +6433,50 @@
         }
       }
 
+      let quality = 'ultra';
+      function setQuality(q, notify = false) {
+        quality = (q === 'balanced') ? 'balanced' : 'ultra';
+        const isUltra = (quality === 'ultra');
+
+        if (isUltra) {
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2.0));
+          renderer.shadowMap.enabled = true;
+          sun.castShadow = true;
+          sun.shadow.mapSize.set(2048, 2048);
+          const nq = $('#nQuality'); if (nq) nq.textContent = 'ULTRA';
+          if (notify && typeof toast === 'function') {
+            toast('✨ <b>Ultra HD Quality Active</b> · Razor-sharp 2× Retina resolution, soft shadows, and sRGB color grading.');
+          }
+        } else {
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
+          renderer.shadowMap.enabled = false;
+          sun.castShadow = false;
+          const nq = $('#nQuality'); if (nq) nq.textContent = 'ECO';
+          if (notify && typeof toast === 'function') {
+            toast('⚡ <b>Balanced Mode Active</b> · High performance & battery efficiency.');
+          }
+        }
+
+        resize();
+        document.querySelectorAll('[data-quality]').forEach(b => {
+          b.setAttribute('aria-pressed', String(b.dataset.quality === quality));
+        });
+        const chip = $('#chipQuality');
+        if (chip) chip.setAttribute('aria-pressed', String(isUltra));
+        try { localStorage.setItem('cauvery_metro_quality', quality); } catch (e) { }
+      }
+
+      function toggleQuality() {
+        setQuality(quality === 'ultra' ? 'balanced' : 'ultra', true);
+      }
+
+      const cQuality = $('#chipQuality');
+      if (cQuality) cQuality.onclick = toggleQuality;
+
+      document.querySelectorAll('[data-quality]').forEach(b => {
+        b.onclick = () => setQuality(b.dataset.quality, true);
+      });
+
       const bindThemeBtn = (id, targetTheme) => {
         const b = $(id);
         if (b) b.onclick = () => setTheme(targetTheme, true);
@@ -6612,7 +6686,7 @@
         controls.target.z = clamp(controls.target.z, Z0, Z1);
         controls.update();
 
-        if (!isMobile) {
+        if (renderer.shadowMap.enabled) {
           // Dynamic shadow frustum centered around view target
           const ext = (VIEW / camera.zoom) * 0.95 + 12;
           sun.position.copy(controls.target).add(SUN_OFF);
@@ -6898,6 +6972,8 @@
       // Start simulation and UI
       boot();
       setTheme(currentTheme, false);
+      const savedQuality = (typeof localStorage !== 'undefined' && localStorage.getItem('cauvery_metro_quality')) || 'ultra';
+      setQuality(savedQuality, false);
       renderPanel(true);
       updateHud();
       if (!events.length) $('#tkMsg').textContent = `${STATIONS.size} Metro stations across ${LINES.length} lines active · Red Line (Thanjavur ↔ Thiruvaiyaru ↔ Swamimalai ↔ Kumbakonam) & Yellow Line operational…`;
