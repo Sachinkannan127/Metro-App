@@ -124,7 +124,7 @@
       pointer-events: auto;
       cursor: pointer;
       will-change: transform;
-      transition: transform 0.1s ease, box-shadow 0.15s ease;
+      transition: box-shadow 0.15s ease, background 0.15s ease;
     }
 
     .slabel:hover {
@@ -1228,6 +1228,32 @@
 
     /* Responsive Mobile Screen Layout */
     @media (max-width: 920px) {
+      /* Disable expensive multi-pass blur over active WebGL canvas on mobile devices */
+      .hud,
+      .panel,
+      .dock,
+      .mobile-sidebar,
+      .fab-btn,
+      .quick-modal,
+      .panel-backdrop {
+        -webkit-backdrop-filter: none !important;
+        backdrop-filter: none !important;
+      }
+
+      .hud,
+      .panel,
+      .mobile-sidebar,
+      .quick-modal {
+        background: rgba(255, 255, 255, 0.96) !important;
+      }
+
+      [data-theme="dark"] .hud,
+      [data-theme="dark"] .panel,
+      [data-theme="dark"] .mobile-sidebar,
+      [data-theme="dark"] .quick-modal {
+        background: rgba(15, 23, 42, 0.96) !important;
+      }
+
       .hud {
         top: max(8px, var(--sat));
         left: max(8px, var(--sal));
@@ -4449,7 +4475,7 @@
       });
 
       // --- STEP C: Houses and Hamlets Filling the Empty Place across the whole Delta ---
-      const STEP_X = 8.5, STEP_Z = 8.5;
+      const STEP_X = isMobile ? 17.0 : 8.5, STEP_Z = isMobile ? 17.0 : 8.5;
       for (let x = X0 + 16; x < X1 - 16; x += STEP_X) {
         for (let z = Z0 + 16; z < Z1 - 16; z += STEP_Z) {
           const jx = x + rr(-3.0, 3.0);
@@ -5233,16 +5259,19 @@
               const boardPos = doorWorld(P, frontSide * (CAR_L / 2 + 0.23), 0);
               board.position.set(boardPos.x, P.y + 0.22, boardPos.z);
               board.rotation.y = P.th + frontSide * Math.PI / 2;
-              board.material.map.image.getContext('2d').clearRect(0, 0, 256, 64);
-              const boardCtx = board.material.map.image.getContext('2d');
-              boardCtx.fillStyle = '#07110D';
-              boardCtx.fillRect(0, 0, 256, 64);
-              boardCtx.fillStyle = '#39FF88';
-              boardCtx.font = '700 25px Arial';
-              boardCtx.textAlign = 'center';
-              boardCtx.textBaseline = 'middle';
-              boardCtx.fillText(dirName(tr.li, tr.dir).toUpperCase().slice(0, 18), 128, 32);
-              board.material.map.needsUpdate = true;
+              const targetText = dirName(tr.li, tr.dir).toUpperCase().slice(0, 18);
+              if (board.userData.text !== targetText) {
+                board.userData.text = targetText;
+                const boardCtx = board.material.map.image.getContext('2d');
+                boardCtx.fillStyle = '#07110D';
+                boardCtx.fillRect(0, 0, 256, 64);
+                boardCtx.fillStyle = '#39FF88';
+                boardCtx.font = '700 25px Arial';
+                boardCtx.textAlign = 'center';
+                boardCtx.textBaseline = 'middle';
+                boardCtx.fillText(targetText, 128, 32);
+                board.material.map.needsUpdate = true;
+              }
               board.visible = true;
             }
           }
@@ -5379,6 +5408,17 @@
       }
 
       function updatePeople(vdt, time) {
+        if (isMobile && camera.zoom < 1.45) {
+          if (pBody.visible) {
+            pBody.visible = false;
+            pHead.visible = false;
+          }
+          return;
+        }
+        if (!pBody.visible) {
+          pBody.visible = true;
+          pHead.visible = true;
+        }
         const A = pBody.instanceMatrix.array, B = pHead.instanceMatrix.array;
         for (let i = 0; i < MAXP; i++) {
           if (!pact[i]) continue;
@@ -5440,9 +5480,12 @@
       camera.zoom = 1.15;
       camera.updateProjectionMatrix();
 
+      let winW = window.innerWidth, winH = window.innerHeight;
       function resize() {
-        const w = window.innerWidth, h = window.innerHeight, a = w / h;
-        renderer.setSize(w, h, false);
+        winW = window.innerWidth;
+        winH = window.innerHeight;
+        const a = winW / winH;
+        renderer.setSize(winW, winH, false);
         camera.left = -VIEW * a;
         camera.right = VIEW * a;
         camera.top = VIEW;
@@ -5602,27 +5645,38 @@
       function place(el, x, y, z, W, H) {
         _v.set(x, y, z).project(camera);
         if (_v.x < -1.1 || _v.x > 1.1 || _v.y < -1.1 || _v.y > 1.1) {
-          el.style.visibility = 'hidden';
+          if (el.style.visibility !== 'hidden') el.style.visibility = 'hidden';
           return false;
         }
-        el.style.visibility = 'visible';
+        if (el.style.visibility !== 'visible') el.style.visibility = 'visible';
         el.style.transform = `translate(${((_v.x + 1) / 2 * W).toFixed(1)}px,${((1 - _v.y) / 2 * H).toFixed(1)}px) translate(-50%,-100%)`;
         return true;
       }
 
       function updateLabels() {
-        const W = window.innerWidth, H = window.innerHeight, z = camera.zoom;
+        const W = winW, H = winH, z = camera.zoom;
+        const minZ = isMobile ? 1.45 : 1.15;
+        const minW = isMobile ? 2.8 : 2.0;
         STATIONS.forEach(S => {
-          const vis = S.lines.some(l => lineGroups[l.li].visible) && (z > 1.15 || S.w >= 2.0 || S.key === selKey);
-          if (!vis) { S.el.style.visibility = 'hidden'; return; }
+          const vis = S.lines.some(l => lineGroups[l.li].visible) && (z > minZ || S.w >= minW || S.key === selKey);
+          if (!vis) {
+            if (S.el.style.visibility !== 'hidden') S.el.style.visibility = 'hidden';
+            return;
+          }
           place(S.el, S.x, S.maxY + 1.45, S.z, W, H);
         });
         LMS.forEach(l => {
-          if (z < 0.8 && !l.el.classList.contains('sea')) { l.el.style.visibility = 'hidden'; return; }
+          if ((z < (isMobile ? 1.0 : 0.8)) && !l.el.classList.contains('sea')) {
+            if (l.el.style.visibility !== 'hidden') l.el.style.visibility = 'hidden';
+            return;
+          }
           place(l.el, l.x, l.y, l.z, W, H);
         });
         P2L.forEach(l => {
-          if (!p2Group.visible) { l.el.style.visibility = 'hidden'; return; }
+          if (!p2Group.visible || (isMobile && z < 1.35)) {
+            if (l.el.style.visibility !== 'hidden') l.el.style.visibility = 'hidden';
+            return;
+          }
           place(l.el, l.x, l.y, l.z, W, H);
         });
         if (rider) {
@@ -6465,9 +6519,12 @@
       // ==========================================
       // 23. MAIN ANIMATION LOOP
       // ==========================================
-      let last = performance.now(), acc1 = 0, acc2 = 0, labelAcc = 0;
-      let renderAcc = 0, peopleAcc = 0, trafficAcc = 0, trainAcc = 0, lightingAcc = 0, craneAcc = 0;
+      let last = performance.now(), acc1 = 0, acc2 = 0;
+      let peopleAcc = 0, trafficAcc = 0, trainAcc = 0, lightingAcc = 0, craneAcc = 0;
       const tgt = new THREE.Vector3();
+      const clockEl = $('#clock');
+      const panelEl = $('#panel');
+      let lastClockSec = -1;
 
       function frame(now) {
         const rdt = Math.min(0.1, (now - last) / 1000);
@@ -6568,20 +6625,12 @@
           }
         }
 
-        renderAcc += rdt;
-        if (!isMobile || renderAcc >= 1 / 30) {
-          renderAcc = 0;
-          renderer.render(scene, camera);
-        }
-        labelAcc += rdt;
-        if (!isMobile || labelAcc >= 0.08) {
-          labelAcc = 0;
-          updateLabels();
-        }
+        renderer.render(scene, camera);
+        updateLabels();
 
         acc1 += rdt;
         acc2 += rdt;
-        if (acc1 > 0.35) {
+        if (acc1 > (isMobile ? 0.6 : 0.35)) {
           acc1 = 0;
           reconcileFigs();
           updateHud();
@@ -6590,10 +6639,16 @@
         }
         if (acc2 > 1.0) {
           acc2 = 0;
-          renderPanel(false);
+          if (!isMobile || (panelEl && panelEl.classList.contains('open'))) {
+            renderPanel(false);
+          }
         }
 
-        $('#clock').textContent = hhmmss(nowIST());
+        const secNow = Math.floor(nowIST());
+        if (secNow !== lastClockSec) {
+          lastClockSec = secNow;
+          clockEl.textContent = hhmmss(secNow);
+        }
         requestAnimationFrame(frame);
       }
 

@@ -1,5 +1,5 @@
 /* Cauvery Delta Metro Service Worker - PWA Offline Support */
-const CACHE_NAME = 'cauvery-metro-v1';
+const CACHE_NAME = 'cauvery-metro-v2';
 const CORE_ASSETS = [
   './',
   './index.html',
